@@ -1,0 +1,291 @@
+{
+  "tests": [
+    {
+      "id": "TC-RF1-01",
+      "title": "Load valid CSV file",
+      "requirement": "RF-1",
+      "description": "The system shall load a well-formed CSV and persist all rows.",
+      "config": {
+        "csv_file": "data_valid.csv"
+      },
+      "input": {},
+      "expected": {
+        "status": "SUCCESS",
+        "rows_loaded_min": 1,
+        "rows_with_error": 0
+      }
+    },
+    {
+      "id": "TC-RF1-02",
+      "title": "Reject CSV with missing required column",
+      "requirement": "RF-1",
+      "description": "The system shall report an error when a required column is missing.",
+      "config": {
+        "csv_file": "data_missing_column.csv"
+      },
+      "input": {},
+      "expected": {
+        "status": "ERROR",
+        "error_code": "MISSING_COLUMN"
+      }
+    },
+
+    {
+      "id": "TC-RF2-01",
+      "title": "Accept request with method GET",
+      "requirement": "RF-2",
+      "description": "Requests with HTTP method GET shall be accepted.",
+      "input": {
+        "method": "GET",
+        "status": 200
+      },
+      "expected": {
+        "is_valid": true,
+        "error_metric": null
+      }
+    },
+    {
+      "id": "TC-RF2-02",
+      "title": "Reject request with method POST",
+      "requirement": "RF-2",
+      "description": "Requests with HTTP method different from GET shall be rejected.",
+      "input": {
+        "method": "POST",
+        "status": 200
+      },
+      "expected": {
+        "is_valid": false,
+        "error_metric": "Bad method"
+      }
+    },
+
+    {
+      "id": "TC-RF3-01",
+      "title": "Reject invalid HTTP status",
+      "requirement": "RF-3",
+      "description": "Only status 200 or 206 shall be accepted.",
+      "input": {
+        "method": "GET",
+        "status": 404
+      },
+      "expected": {
+        "is_valid": false,
+        "error_metric": "Bad status"
+      }
+    },
+
+    {
+      "id": "TC-RF4-01",
+      "title": "Detect bot user agent",
+      "requirement": "RF-4",
+      "description": "User agents containing BOT, SPIDER, CRAWLER or HERITRIX shall be detected as bots.",
+      "input": {
+        "user_agent": "Mozilla/5.0 SOME_BOT",
+        "method": "GET",
+        "status": 200
+      },
+      "expected": {
+        "is_valid": false,
+        "error_metric": "Bot detected"
+      }
+    },
+
+    {
+      "id": "TC-RF5-01",
+      "title": "Accept .mp3 resource",
+      "requirement": "RF-5",
+      "description": "URIs ending with .mp3 shall be accepted.",
+      "input": {
+        "uri_episode": "/episodes/test.mp3"
+      },
+      "expected": {
+        "is_valid": true,
+        "error_metric": null
+      }
+    },
+    {
+      "id": "TC-RF5-02",
+      "title": "Reject non .mp3 resource",
+      "requirement": "RF-5",
+      "description": "URIs not ending with .mp3 shall be rejected.",
+      "input": {
+        "uri_episode": "/episodes/test.wav"
+      },
+      "expected": {
+        "is_valid": false,
+        "error_metric": "Bad format resource"
+      }
+    },
+
+    {
+      "id": "TC-RF6-01",
+      "title": "Generate error observation for invalid request",
+      "requirement": "RF-6",
+      "description": "Each invalid request shall generate an error observation with metric name and URI.",
+      "input": {
+        "method": "POST",
+        "status": 500,
+        "uri_episode": "/episodes/test.mp3"
+      },
+      "expected": {
+        "observation_created": true,
+        "observation": {
+          "metric_name": "Bad method",
+          "value": 1,
+          "uri_episode": "/episodes/test.mp3"
+        }
+      }
+    },
+
+    {
+      "id": "TC-RF7-01",
+      "title": "Generate download 206 after threshold",
+      "requirement": "RF-7",
+      "description": "A 206 download shall be generated once accumulated bytes reach the threshold.",
+      "input": {
+        "user_id": "u1",
+        "user_agent": "Mozilla",
+        "episode": "/episodes/test.mp3",
+        "requests": [
+          { "status": 206, "bytes": 600000 },
+          { "status": 206, "bytes": 500000 }
+        ]
+      },
+      "expected": {
+        "downloads_206": 1,
+        "downloads_200": 0
+      }
+    },
+    {
+      "id": "TC-RF7-02",
+      "title": "Generate download 200 after threshold",
+      "requirement": "RF-7",
+      "description": "A 200 download shall be generated once accumulated bytes reach the threshold.",
+      "input": {
+        "user_id": "u1",
+        "user_agent": "Mozilla",
+        "episode": "/episodes/test.mp3",
+        "requests": [
+          { "status": 200, "bytes": 20000000 },
+          { "status": 200, "bytes": 15000000 }
+        ]
+      },
+      "expected": {
+        "downloads_200": 1,
+        "downloads_206": 0
+      }
+    },
+
+    {
+      "id": "TC-RF8-01",
+      "title": "Compute metrics summary",
+      "requirement": "RF-8",
+      "description": "The system shall compute the total count of each metric type after processing.",
+      "config": {
+        "analysis_source": "observations_test.db"
+      },
+      "input": {},
+      "expected": {
+        "summary_keys_min": [
+          "Download 200",
+          "Download 206",
+          "Bad method",
+          "Bad status",
+          "Bad format resource",
+          "Bot detected"
+        ]
+      }
+    },
+
+    {
+      "id": "TC-RF9-01",
+      "title": "Return top 3 podcasts by downloads",
+      "requirement": "RF-9",
+      "description": "The system shall return a list of k podcasts ordered by number of downloads.",
+      "input": {
+        "k": 3
+      },
+      "expected": {
+        "length": 3,
+        "ordered_by_downloads_desc": true
+      }
+    },
+
+    {
+      "id": "TC-RF10-01",
+      "title": "Generate bar chart for top-K podcasts",
+      "requirement": "RF-10",
+      "description": "The system shall generate a bar chart using the top-K podcasts.",
+      "input": {
+        "k": 5
+      },
+      "expected": {
+        "chart_type": "bar",
+        "points": 5
+      }
+    },
+
+    {
+      "id": "TC-RF11-01",
+      "title": "Recommend episodes for given user",
+      "requirement": "RF-11",
+      "description": "The system shall recommend k episodes based on topics from user history.",
+      "input": {
+        "user_id": "u123",
+        "k": 5
+      },
+      "expected": {
+        "length": 5,
+        "topics_from_user_history": true
+      }
+    },
+
+    {
+      "id": "TC-RFN1-01",
+      "title": "OpenAPI spec is valid and contains required endpoints",
+      "requirement": "RFN-1",
+      "description": "The OpenAPI specification shall be valid and include CRUD and recommendation endpoints.",
+      "config": {
+        "openapi_file": "openapi.yaml"
+      },
+      "input": {},
+      "expected": {
+        "is_valid_openapi": true,
+        "required_paths_present": [
+          "/podcasts",
+          "/episodes",
+          "/metrics",
+          "/observations",
+          "/recommendations"
+        ]
+      }
+    },
+
+    {
+      "id": "TC-RFN2-01",
+      "title": "Reject API request without authentication",
+      "requirement": "RFN-2",
+      "description": "The API shall reject requests without valid credentials.",
+      "input": {
+        "path": "/episodes",
+        "auth_header": null
+      },
+      "expected": {
+        "http_status": 401
+      }
+    },
+    {
+      "id": "TC-RFN2-02",
+      "title": "Accept API request with valid authentication",
+      "requirement": "RFN-2",
+      "description": "The API shall accept requests with valid credentials.",
+      "input": {
+        "path": "/episodes",
+        "auth_header": "Basic dXNlcjpwYXNz"
+      },
+      "expected": {
+        "http_status": 200
+      }
+    }
+  ]
+}
